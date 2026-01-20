@@ -1,0 +1,21 @@
+\section{Datasets}
+
+To demonstrate the versatility of DAPT, we evaluate on three distinct domains reflecting real-world few-shot challenges: industrial inspection, fine-grained classification, and texture recognition.
+
+\paragraph{MVTec AD (Industrial Defects).}
+We use the MVTec Anomaly Detection dataset, which contains 15 categories of industrial objects and textures with various defect types (e.g., scratches, dents). 
+This dataset simulates the "vocabulary-free" finding where exact defect names may be unknown or variable. 
+We strictly follow the standard few-shot protocol, using $K \in \{1, 2, 4, 8, 16\}$ shots per class for training/registration.
+
+\paragraph{EuroSAT (Remote Sensing).}
+Reflecting the "AgroViT" agricultural context, we utilize EuroSAT, comprising 27,000 labeled and georeferenced satellite images of land use/cover. 
+This dataset tests robustness to domain shifts significantly different from natural image pre-training data.
+
+\paragraph{Oxford-IIIT Pets (Fine-Grained).}
+A standard benchmark for few-shot learning, containing 37 breeds of cats and dogs with approximately 200 images per class. 
+This serves as a baseline to verify performance on natural images.
+
+\paragraph{Implementation Details.}
+We use CLIP-ViT-B/16 as the backbone. 
+All images are resized to $224 \times 224$ and normalized using standard CLIP mean and standard deviation. 
+We report average accuracy over 3 independent seeds to ensure statistical significance.

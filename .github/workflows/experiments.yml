@@ -1,0 +1,44 @@
+name: Experiments
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  run-experiments:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+        
+    - name: Install Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r code/requirements.txt
+        pip install modal
+
+    - name: Run Experiments on Modal GPU
+      env:
+        MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+        MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      run: |
+        modal run code/modal_train.py
+
+    - name: Aggregate Results
+      run: |
+        echo "Aggregating Results..."
+        cat results/*.txt > all_results.log
+        cat all_results.log
+        
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: experiment-logs
+        path: results/

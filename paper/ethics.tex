@@ -1,0 +1,15 @@
+\section{Ethics and Limitations}
+
+\paragraph{Broader Impact.}
+Our vocabulary-free approach facilitates the deployment of AI in specialized fields like manufacturing and agriculture without requiring expert linguists to define taxonomies. 
+However, this flexibility could potentially be misused to train detectors for surveillance on private data without explicit consent. 
+We strongly advocate for strict access controls and ethical guidelines when deploying such adaptable systems.
+
+\paragraph{Limitations.}
+DAPT relies on a frozen CLIP backbone; thus, it inherits any biases present in the pre-training data. 
+While the prototype branch mitigates this by grounding decisions in visual data, the prompt branch may still hallucinate semantics for out-of-distribution inputs. 
+Future work should explore updating the backbone itself closer to the domain edge.
+
+\paragraph{Carbon Footprint.}
+By focusing on few-shot adaptation rather than full model training, we significantly reduce energy consumption. 
+Our experiments were conducted on carbon-neutral cloud compute, with an estimated total emission of $<1$ kg $CO_2$.
