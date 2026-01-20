@@ -56,57 +56,127 @@ def train(args):
     # Mocking data loading for GHA demonstration if real data not present
     # In a real run, this would load EuroSAT/MVTec
     print(f"Loading Model: {args.backbone}")
-    model, preprocess = clip.load(args.backbone, device='cpu')
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, preprocess = clip.load(args.backbone, device=device)
+    dim = model.visual.output_dim
     
-    # Simulate Features (D=512 for ViT-B/32, 1024 for RN50 etc)
-    # Using random features to verify pipeline runs on GHA without massive download
-    # unless real dataset passed
-    dim = 512
-    num_classes = 10
+    n_shot = args.shots
+    print(f"Device: {device}")
+    
+    # Real Data Loading: OxfordIIITPet
+    print(f"Loading Dataset: OxfordIIITPet")
+    from torchvision.datasets import OxfordIIITPet
+    from torch.utils.data import DataLoader
+
+    # Define transforms
+    # CLIP's preprocess is usually a torchvision Transform
+    
+    root_dir = "./data"
+    os.makedirs(root_dir, exist_ok=True)
+    
+    try:
+        dataset = OxfordIIITPet(root=root_dir, split='trainval', transform=preprocess, download=True)
+    except Exception as e:
+        print(f"Failed to download dataset locally (might be expected in CI if network restricted): {e}")
+        # Fallback to random for CI smoke test if network fails, BUT we want real data
+        # In Modal, network is available.
+        raise e
+
+    print(f"Dataset Size: {len(dataset)}")
+    
+    # Extract Features
+    # We'll extract all features first, then sample k-shot
+    print("Extracting features (this may take a moment)...")
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=2)
+    
+    all_features = []
+    all_labels = []
+    
+    model.eval()
+    with torch.no_grad():
+        for images, labels in tqdm(dataloader):
+            images = images.to(device)
+            features = model.encode_image(images)
+            features = features / features.norm(dim=-1, keepdim=True)
+            all_features.append(features.cpu())
+            all_labels.append(labels)
+            
+    all_features = torch.cat(all_features)
+    all_labels = torch.cat(all_labels)
+    
+    # Few-Shot Sampling
+    # Select N classes? OxfordPets has 37. We use all.
+    classes = torch.unique(all_labels)
+    num_classes = len(classes)
     n_shot = args.shots
     
-    print(f"Simulating {n_shot}-shot training for {num_classes} classes...")
+    print(f"Sampling {n_shot}-shot support set for {num_classes} classes...")
     
-    # Generate synthetic support set
-    support_features = torch.randn(num_classes * n_shot, dim)
-    support_features /= support_features.norm(dim=-1, keepdim=True)
-    support_labels = torch.cat([torch.tensor([i]*n_shot) for i in range(num_classes)])
+    support_indices = []
+    query_indices = []
     
-    # Generate query set
-    query_features = torch.randn(100, dim)
-    query_features /= query_features.norm(dim=-1, keepdim=True)
-    query_labels = torch.randint(0, num_classes, (100,))
+    for c in classes:
+        # Get indices for this class
+        c_indices = (all_labels == c).nonzero(as_tuple=True)[0]
+        c_indices = c_indices[torch.randperm(len(c_indices))]
+        
+        if len(c_indices) < n_shot + 1:
+             # Skip classes with not enough data (unlikely for Pets)
+             continue
+             
+        support_indices.append(c_indices[:n_shot])
+        query_indices.append(c_indices[n_shot:])
+        
+    support_indices = torch.cat(support_indices)
+    query_indices = torch.cat(query_indices)
+    
+    support_features = all_features[support_indices].to(device).double()
+    support_labels = all_labels[support_indices].to(device)
+    
+    # Subsample query to avoid OOM or too long eval
+    # Use max 50 queries per class
+    MAX_QUERY = 50
+    q_subset = []
+    for c in classes:
+        c_q = query_indices[all_labels[query_indices] == c]
+        if len(c_q) > MAX_QUERY:
+            c_q = c_q[:MAX_QUERY]
+        q_subset.append(c_q)
+    query_indices = torch.cat(q_subset)
+    
+    query_features = all_features[query_indices].to(device).double()
+    query_labels = all_labels[query_indices].to(device)
     
     # Compute Prototypes
     prototypes = []
     for c in range(num_classes):
+        # We need to map class ID 0..36
+        # support_labels are already correct indices
         p = support_features[support_labels == c].mean(0)
         p /= p.norm()
         prototypes.append(p)
-    prototypes = torch.stack(prototypes)
+    prototypes = torch.stack(prototypes).to(device)
     
     # Train DAPT
-    adapter = DualAlignmentAdapter(dim).double()
+    adapter = DualAlignmentAdapter(dim).double().to(device)
     optimizer = torch.optim.AdamW(adapter.parameters(), lr=1e-3, eps=1e-4)
     criterion = torch.nn.CrossEntropyLoss()
     
-    print("Training Adapter...")
-    for epoch in range(50): # Fast training
+    print("Training Adapter on Real Features...")
+    for epoch in range(50):
         optimizer.zero_grad()
-        logits = adapter(support_features.double(), prototypes.double())
+        logits = adapter(support_features, prototypes)
         loss = criterion(logits, support_labels)
         loss.backward()
         optimizer.step()
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch}: Loss {loss.item():.4f}")
             
     # Eval
     with torch.no_grad():
-        logits = adapter(query_features.double(), prototypes.double())
+        logits = adapter(query_features, prototypes)
         preds = logits.argmax(dim=1)
         acc = (preds == query_labels).float().mean()
         
-    print(f"Seed {args.seed} | Shots {args.shots} | Accuracy: {acc.item():.4f}")
+    print(f"Seed {args.seed} | Shots {args.shots} | OxfordPets Accuracy: {acc.item():.4f}")
     
     # Save Results
     os.makedirs('results', exist_ok=True)

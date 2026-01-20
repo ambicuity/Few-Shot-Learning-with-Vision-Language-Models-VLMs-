@@ -7,3 +7,4 @@ numpy
 scikit-learn
 clip @ git+https://github.com/openai/CLIP.git
 modal
+scipy
