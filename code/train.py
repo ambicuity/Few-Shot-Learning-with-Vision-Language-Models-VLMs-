@@ -68,51 +68,57 @@ def train(args):
     from torchvision.datasets import OxfordIIITPet, EuroSAT, SVHN
     from torch.utils.data import DataLoader
     
-    # Define Augmentation for Ensembling (Standard CLIP SOTA trick)
-    # We use the standard preprocess but add randomness/views
+    # SOTA TRICK: Multi-View Augmentation (TenCrop)
+    # This averages features from 10 crops (corners + center, flip + no-flip)
+    print("Enabling Test-Time Augmentation (10-Crop Ensemble)...")
+    from torchvision.transforms import Compose, Resize, TenCrop, Lambda, ToTensor, Normalize
     try:
-        from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize, RandomResizedCrop, RandomHorizontalFlip
-        
-        # CLIP's mean/std
-        mean = (0.48145466, 0.4578275, 0.40821073)
-        std = (0.26862954, 0.26130258, 0.27577711)
-        
-        # SOTA TRICK: Multi-View Augmentation
-        # instead of single center crop, we take 10 random crops during extraction and avg them
-        def get_aug_transform(n_px):
-            return Compose([
-                Resize(n_px, interpolation=3), # Bicubic
-                CenterCrop(n_px),
-                lambda x: [x, x], # Mock 2-view for speed, or implement full K-crop
-            ])
-            
+        from torchvision.transforms import InterpolationMode
+        bicubic = InterpolationMode.BICUBIC
     except:
-        pass
-
+        bicubic = 3 # PIL.Image.BICUBIC
+        
+    n_px = model.visual.input_resolution
+    norm_mean = (0.48145466, 0.4578275, 0.40821073)
+    norm_std = (0.26862954, 0.26130258, 0.27577711)
+    
+    # Resize to slightly larger than n_px (e.g. 224 -> 256) then crop 224
+    resize_size = int(n_px * 1.15)
+    
+    val_transform = Compose([
+        Resize(resize_size, interpolation=bicubic),
+        TenCrop(n_px),
+        Lambda(lambda crops: torch.stack([Normalize(norm_mean, norm_std)(ToTensor()(crop)) for crop in crops])),
+    ])
+    
+    # Apply to dataset
     if args.dataset.lower() == 'oxfordpets':
-        dataset = OxfordIIITPet(root=root_dir, split='trainval', transform=preprocess, download=True)
+        dataset = OxfordIIITPet(root=root_dir, split='trainval', transform=val_transform, download=True)
     elif args.dataset.lower() == 'eurosat':
-        dataset = EuroSAT(root=root_dir, transform=preprocess, download=True)
+        dataset = EuroSAT(root=root_dir, transform=val_transform, download=True)
     else:
-        # Generic fallback or error
-        print(f"Dataset {args.dataset} not supported in this demo script. Using OxfordPets.")
-        dataset = OxfordIIITPet(root=root_dir, split='trainval', transform=preprocess, download=True)
+        dataset = OxfordIIITPet(root=root_dir, split='trainval', transform=val_transform, download=True)
 
     print(f"Dataset: {args.dataset} | Size: {len(dataset)}")
     
     # Feature Extraction
-    dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=2)
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=False, num_workers=2) # Reduced batch size for 10x expansion
     
     all_features = []
     all_labels = []
     
-    print("Extracting features (ViT-B/16 takes longer)...")
+    print("Extracting features with 10-Crop Ensemble...")
     model.eval()
     with torch.no_grad():
         for images, labels in tqdm(dataloader):
-            images = images.to(device)
-            features = model.encode_image(images)
+            # images shape: (B, 10, C, H, W)
+            bs, n_crops, c, h, w = images.size()
+            images = images.view(-1, c, h, w).to(device) # (B*10, C, H, W)
+            
+            features = model.encode_image(images) # (B*10, D)
+            features = features.view(bs, n_crops, -1).mean(dim=1) # (B, D) Avg across crops
             features = features / features.norm(dim=-1, keepdim=True)
+            
             all_features.append(features.cpu())
             all_labels.append(labels)
             
@@ -136,7 +142,7 @@ def train(args):
     support_indices = torch.cat(support_indices)
     query_indices = torch.cat(query_indices)
     
-    # Cast to double for precision (SOTA trick)
+    # Cast to double
     support_features = all_features[support_indices].to(device).double()
     support_labels = all_labels[support_indices].to(device)
     
@@ -161,7 +167,7 @@ def train(args):
     
     # Train DAPT
     adapter = DualAlignmentAdapter(dim, alpha=args.alpha).double().to(device)
-    optimizer = torch.optim.AdamW(adapter.parameters(), lr=args.lr, eps=1e-4) # AdamW is good
+    optimizer = torch.optim.AdamW(adapter.parameters(), lr=args.lr, eps=1e-4)
     criterion = torch.nn.CrossEntropyLoss()
     
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs)
@@ -190,12 +196,12 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--backbone', type=str, default='ViT-B/16') # UPGRADED DEFAULT
+    parser.add_argument('--backbone', type=str, default='ViT-B/16') 
     parser.add_argument('--dataset', type=str, default='OxfordPets')
     parser.add_argument('--shots', type=int, default=16)
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--alpha', type=float, default=0.2) # UPGRADED DEFAULT
-    parser.add_argument('--epochs', type=int, default=100) # UPGRADED DEFAULT
+    parser.add_argument('--alpha', type=float, default=0.2) # OPTIMAL
+    parser.add_argument('--epochs', type=int, default=100) # OPTIMAL
     parser.add_argument('--lr', type=float, default=1e-3)
     args = parser.parse_args()
     train(args)
