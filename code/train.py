@@ -64,7 +64,9 @@ def train(args):
     
     # Dataset Router
     root_dir = "./data"
+    # Ensure imports are available globally
     from torchvision.datasets import OxfordIIITPet, EuroSAT, SVHN
+    from torch.utils.data import DataLoader
     
     # Define Augmentation for Ensembling (Standard CLIP SOTA trick)
     # We use the standard preprocess but add randomness/views
@@ -82,13 +84,8 @@ def train(args):
                 Resize(n_px, interpolation=3), # Bicubic
                 CenterCrop(n_px),
                 lambda x: [x, x], # Mock 2-view for speed, or implement full K-crop
-                # For this demo, let's keep it simple: Standard Preprocess is robust enough if we swap backbone.
-                # Actually, let's stick to standard preprocess for speed but switch BACKBONE.
             ])
             
-        # To strictly beat 87%, we need ViT-B/16 + good params.
-        # Let's trust the backbone upgrade first.
-        
     except:
         pass
 
