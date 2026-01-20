@@ -36,6 +36,9 @@ jobs:
         echo "Aggregating Results..."
         cat results/*.txt > all_results.log
         cat all_results.log
+
+    - name: Validate vs SOTA
+      run: python code/validate_sota.py
         
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3

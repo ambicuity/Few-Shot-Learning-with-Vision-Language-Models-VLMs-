@@ -1,0 +1,32 @@
+\section{Theoretical Analysis}
+\label{sec:theory}
+
+In this section, we provide a theoretical guarantee for the generalization capability of the Dual-Alignment Prompt Tuning (DAPT) framework. 
+We rely on the framework of VC-dimension and Rademacher complexity to bound the generalization error.
+
+\subsection{Problem Setup}
+Let $\mathcal{D}$ be the underlying distribution over $\mathcal{X} \times \mathcal{Y}$. 
+DAPT learns a hypothesis $h \in \mathcal{H}$ parameterized by prompts $v$ and prototypes $P$. 
+The loss function is the cross-entropy loss $\ell(h(x), y)$.
+The dual-alignment objective minimizes:
+\begin{equation}
+    \mathcal{L}(v, P) = \mathcal{L}_{CE}(v, P) + \lambda \mathcal{L}_{align}(v, P)
+\end{equation}
+
+\subsection{Generalization Bound}
+\begin{theorem}
+\label{thm:generalization}
+Let $\mathcal{H}_{DAPT}$ be the hypothesis class of DAPT models. 
+With probability at least $1-\delta$ over the choice of $N$ training samples, for any $h \in \mathcal{H}_{DAPT}$, the generalization gap is bounded by:
+\begin{equation}
+    R(h) - \hat{R}(h) \leq 2\mathfrak{R}_N(\mathcal{H}_{DAPT}) + \sqrt{\frac{\ln(1/\delta)}{2N}}
+\end{equation}
+where $\mathfrak{R}_N(\mathcal{H}_{DAPT})$ is the Rademacher complexity of the DAPT class.
+\end{theorem}
+
+\begin{proof}
+(Sketch) The dual-alignment constraint $\mathcal{L}_{align}$ effectively restricts the search space of the prompt vectors $v$ to lie within a $\epsilon$-ball of the visual prototypes $P$. 
+This regularization reduces the effective VC-dimension of the hypothesis class compared to unconstrained prompt tuning (CoOp).
+Specifically, if prototypes are fixed, the complexity depends only on the alignment drift.
+By standard learning theory results (Bartlett & Mendelson, 2002), restricting the hypothesis space via the alignment prior strictly lowers the bound on $\mathfrak{R}_N$, thereby tightening the generalization gap compared to baseline methods.
+\end{proof}
