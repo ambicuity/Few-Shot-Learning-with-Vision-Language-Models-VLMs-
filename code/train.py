@@ -158,12 +158,12 @@ def train(args):
     prototypes = torch.stack(prototypes).to(device)
     
     # Train DAPT
-    adapter = DualAlignmentAdapter(dim).double().to(device)
-    optimizer = torch.optim.AdamW(adapter.parameters(), lr=1e-3, eps=1e-4)
+    adapter = DualAlignmentAdapter(dim, alpha=args.alpha).double().to(device)
+    optimizer = torch.optim.AdamW(adapter.parameters(), lr=args.lr, eps=1e-4)
     criterion = torch.nn.CrossEntropyLoss()
     
-    print("Training Adapter on Real Features...")
-    for epoch in range(50):
+    print(f"Training Adapter on Real Features (Alpha={args.alpha}, LR={args.lr}, Epochs={args.epochs})...")
+    for epoch in range(args.epochs):
         optimizer.zero_grad()
         logits = adapter(support_features, prototypes)
         loss = criterion(logits, support_labels)
@@ -176,11 +176,13 @@ def train(args):
         preds = logits.argmax(dim=1)
         acc = (preds == query_labels).float().mean()
         
-    print(f"Seed {args.seed} | Shots {args.shots} | OxfordPets Accuracy: {acc.item():.4f}")
+    print(f"Seed {args.seed} | Shots {args.shots} | Alpha {args.alpha} | OxfordPets Accuracy: {acc.item():.4f}")
     
     # Save Results
     os.makedirs('results', exist_ok=True)
-    with open(f'results/res_seed{args.seed}_shot{args.shots}.txt', 'w') as f:
+    # Filename includes hyperparameters now
+    fname = f'results/res_seed{args.seed}_shot{args.shots}_alpha{args.alpha}.txt'
+    with open(fname, 'w') as f:
         f.write(f"{acc.item():.4f}")
 
 if __name__ == '__main__':
@@ -188,5 +190,8 @@ if __name__ == '__main__':
     parser.add_argument('--backbone', type=str, default='ViT-B/32')
     parser.add_argument('--shots', type=int, default=16)
     parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--alpha', type=float, default=0.5)
+    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--lr', type=float, default=1e-3)
     args = parser.parse_args()
     train(args)

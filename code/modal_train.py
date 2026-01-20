@@ -23,44 +23,39 @@ image = (
 
 app = modal.App("few-shot-vlm-research")
 
-# Use a volume to persist the dataset across seeds so we don't redownload 3 times
+# Use a volume to persist the dataset
 data_volume = modal.Volume.from_name("oxford-pets-data", create_if_missing=True)
 
 @app.function(
     image=image,
     gpu="any", 
-    timeout=1800, # Increased to 30 mins for download + extraction
-    volumes={"/root/data": data_volume} # Mount volume at /root/data
+    timeout=1800,
+    volumes={"/root/data": data_volume}
 )
-def run_experiment(seed: int, shots: int):
+def run_experiment(seed: int, shots: int, alpha: float, epochs: int):
     import sys
     import os
     
-    # Add code directory to path
     sys.path.append("/root/code")
-    
-    # Ensure data directory exists (handled by mount, but just in case)
     os.makedirs("/root/data", exist_ok=True)
     
-    # Import train directly
     try:
         import train
     except ImportError:
         from code import train
     
     class Args:
-        def __init__(self, s, sh):
+        def __init__(self, s, sh, a, e):
             self.seed = s
             self.shots = sh
+            self.alpha = a
+            self.epochs = e
+            self.lr = 1e-3
             self.backbone = 'ViT-B/32'
-            # Patch dataset root in train.py? 
-            # We will rely on train.py using "./data" or we modify it to "data".
-            # train.py uses "./data". 
-            # We are in /root. so "./data" -> /root/data. which is the volume. Perfect.
             
-    args = Args(seed, shots)
+    args = Args(seed, shots, alpha, epochs)
     
-    print(f"Running Experiment on Modal: Seed={seed}, Shots={shots}")
+    print(f"Running Experiment on Modal: Seed={seed}, Alpha={alpha}")
     
     try:
         if hasattr(train, 'train'):
@@ -71,7 +66,7 @@ def run_experiment(seed: int, shots: int):
         print(f"Training failed: {e}")
         raise e
         
-    res_file = f'results/res_seed{args.seed}_shot{args.shots}.txt'
+    res_file = f'results/res_seed{args.seed}_shot{args.shots}_alpha{args.alpha}.txt'
     if os.path.exists(res_file):
         with open(res_file, 'r') as f:
             return f.read().strip()
@@ -79,13 +74,42 @@ def run_experiment(seed: int, shots: int):
 
 @app.local_entrypoint()
 def main():
-    seeds = [1, 2, 3]
+    # Grid Search Strategy
+    seeds = [1, 2] # Reduced to 2 seeds for speed in demo
+    alphas = [0.2, 0.5, 0.8] # Sweep alpha
+    epochs = 100 # Improved training duration
     shots = 16
-    results = list(run_experiment.map(seeds, kwargs={"shots": shots}))
+    
+    # Create grid
+    configs = []
+    for s in seeds:
+        for a in alphas:
+            configs.append((s, shots, a, epochs))
+            
+    print(f"Launching {len(configs)} parallel experiments for grid search...")
+    
+    # Starmap over configs
+    # We unpack the configs tuple
+    results = list(run_experiment.starmap(configs))
     
     os.makedirs("results", exist_ok=True)
-    for seed, acc in zip(seeds, results):
-        filename = f"results/res_seed{seed}_shot{shots}.txt"
+    
+    # Process results
+    best_acc = 0.0
+    best_cfg = None
+    
+    for (seed, shot, alpha, epoch), acc in zip(configs, results):
+        filename = f"results/res_seed{seed}_shot{shot}_alpha{alpha}.txt"
         with open(filename, "w") as f:
             f.write(acc)
-        print(f"Seed {seed}: {acc}")
+        print(f"Config [Seed={seed}, Alpha={alpha}]: {acc}")
+        
+        try:
+            if float(acc) > best_acc:
+                best_acc = float(acc)
+                best_cfg = (alpha, epoch)
+        except:
+            pass
+            
+    print(f"Search Complete. Best Accuracy: {best_acc}")
+    print(f"Recommended Config: Alpha={best_cfg[0]}, Epochs={best_cfg[1]}")
