@@ -6,6 +6,7 @@ import sys
 # We use a standard Debian slim image and install our requirements
 image = (
     modal.Image.debian_slim()
+    .apt_install("git")
     .pip_install(
         "torch",
         "torchvision",
@@ -16,30 +17,32 @@ image = (
         "scikit-learn",
         "git+https://github.com/openai/CLIP.git"
     )
+    .add_local_dir("code", remote_path="/root/code")
 )
 
 app = modal.App("few-shot-vlm-research")
 
-# Mount the code directory so the container can access train.py
-# We mount everything in 'code/' to '/root/code/' in the container
-code_mount = modal.Mount.from_local_dir("code", remote_path="/root/code")
+# Mount is handled via image definition
+# code_mount = modal.Mount.from_local_dir("code", remote_path="/root/code")
 
 @app.function(
     image=image,
     gpu="any",  # Request any available GPU
     timeout=600, # 10 minutes max
-    mounts=[code_mount]
 )
 def run_experiment(seed: int, shots: int):
     import sys
     import os
     
-    # Add code directory to path so imports work if needed, though we run as script
+    # Add code directory to path so imports work if needed
     sys.path.append("/root/code")
     
-    # We will import the train function directly to avoid subprocess overhead
-    # but for simplicity and isolation, we can also use os.system
-    from code.train import train
+    # Import train directly since we are ensuring compatibility
+    try:
+        import train
+    except ImportError:
+        # Fallback if path handling differs
+        from code import train
     
     class Args:
         def __init__(self, s, sh):
@@ -67,7 +70,12 @@ def run_experiment(seed: int, shots: int):
     # However, train.py writes to 'results/...'.
     # We'll read that file back and return the content.
     try:
-        train(args)
+        # Check if train is a module or function
+        if hasattr(train, 'train'):
+            train.train(args)
+        else:
+            # If imported as function
+            train(args)
     except Exception as e:
         print(f"Training failed: {e}")
         raise e
