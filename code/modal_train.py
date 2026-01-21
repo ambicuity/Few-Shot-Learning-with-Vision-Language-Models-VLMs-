@@ -77,6 +77,7 @@ def run_experiment(config):
 
 @app.local_entrypoint()
 def main():
+    import numpy as np
     # Fix 1: Run 5 Seeds for robust Std Dev
     seeds = [1, 2, 3, 4, 5]
     alpha = 0.2
