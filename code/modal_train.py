@@ -32,7 +32,7 @@ data_volume = modal.Volume.from_name("oxford-pets-data", create_if_missing=True)
     timeout=1800,
     volumes={"/root/data": data_volume}
 )
-@app.function(image=image, gpu="any", timeout=1800, volumes={"/root/data": volume})
+@app.function(image=image, gpu="any", timeout=1800, volumes={"/root/data": data_volume})
 def run_experiment(config):
     # Setup imports inside the container
     import sys
