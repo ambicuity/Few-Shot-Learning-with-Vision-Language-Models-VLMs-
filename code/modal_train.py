@@ -32,10 +32,11 @@ data_volume = modal.Volume.from_name("oxford-pets-data", create_if_missing=True)
     timeout=1800,
     volumes={"/root/data": data_volume}
 )
-def run_experiment(seed: int, shots: int, alpha: float, epochs: int):
+@app.function(image=image, gpu="any", timeout=1800, volumes={"/root/data": volume})
+def run_experiment(config):
+    # Setup imports inside the container
     import sys
     import os
-    
     sys.path.append("/root/code")
     os.makedirs("/root/data", exist_ok=True)
     
@@ -43,11 +44,11 @@ def run_experiment(seed: int, shots: int, alpha: float, epochs: int):
         import train
     except ImportError:
         from code import train
+
+    # Fix: Unpack tuple configuration
+    print(f"DEBUG: Processing config: {config}")
+    seed, shots, alpha, epochs, visualize = config
     
-    class Args:
-        def __init__(self, s, sh, a, e):
-            self.seed = s
-            self.shots = sh
     class Args:
         def __init__(self, s, sh, a, e, vis=False):
             self.seed = s
