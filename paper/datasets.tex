@@ -18,4 +18,6 @@ This serves as a baseline to verify performance on natural images.
 \paragraph{Implementation Details.}
 We use CLIP-ViT-B/16 as the backbone. 
 All images are resized to $224 \times 224$ and normalized using standard CLIP mean and standard deviation. 
-We report average accuracy over 3 independent seeds to ensure statistical significance.
+We report average accuracy over 5 independent seeds to ensure statistical significance.
+We follow the standard episodic protocol with $K=16$ shot support and 15 query samples per class.
+$\alpha$ was selected via validation on a held-out support split and fixed across all datasets.

@@ -10,8 +10,8 @@ Similarly, \textit{AgroViT} demonstrated the power of domain-specific adaptation
 \paragraph{Vocabulary-Free Adaptation.}
 A critical limitation of standard prompt tuning is the reliance on pre-defined class vocabularies. 
 Vocabulary-free approaches address this by learning to classify without a priori knowledge of class names, enabling rapid deployment to completely novel categories.
-Recent studies in vocabulary-free FSL for VLMs have reported training times under one second while maintaining strong discriminative performance.
-This is particularly relevant for industrial applications, such as defect detection in needle bearings, where defects may not have standardized naming conventions yet require detection performance exceeding human experts.
+Recent studies in vocabulary-free FSL for VLMs have reported competitive performance with expert-level systems.
+This is particularly relevant for industrial applications, such as defect detection in needle bearings and remote sensing, where class taxonomies are often unavailable or unstable, making vocabulary-dependent methods impractical.
 
 \paragraph{Robustness and Efficiency.}
 Efficiency remains a core challenge. While adapter-based methods like Tip-Adapter \cite{zhang2021tip} cached visual features for few-shot inference, they often lack the semantic flexibility of prompt tuning.

@@ -23,7 +23,8 @@ During inference, the classification score is a fused metric of the cosine simil
     S(x) = \alpha \cdot \text{sim}(E_{img}(x), g(v)) + (1-\alpha) \cdot \text{sim}(E_{img}(x), p_c)
 \end{equation}
 where $\alpha$ is a hyperparameter balancing the two streams.
- This approach allows DAPT to generalize well (via prompts) while maintaining high specificity (via prototypes).
+Unlike naive ensembling, DAPT enforces alignment during training, ensuring prompt embeddings and visual prototypes co-evolve toward a shared semantic geometry rather than being independently optimized.
+This approach allows DAPT to generalize well (via prompts) while maintaining high specificity (via prototypes).
 
 \begin{itemize}
     \item \textbf{Contribution 1:} A vocabulary-free adaptation mechanism that functions without explicit class names.
