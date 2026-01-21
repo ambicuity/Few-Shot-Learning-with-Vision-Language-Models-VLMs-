@@ -82,42 +82,42 @@ def run_experiment(config):
 
 @app.local_entrypoint()
 def main():
-    # Grid Search Strategy
-    seeds = [1, 2] # Reduced to 2 seeds for speed in demo
-    alphas = [0.2, 0.5, 0.8] # Sweep alpha
-    epochs = 100 # Improved training duration
+    # Fix 1: Run 5 Seeds for robust Std Dev
+    seeds = [1, 2, 3, 4, 5]
+    alpha = 0.2
+    epochs = 100
     shots = 16
     
-    # Create grid
+    # Pass TUPLES to map: (seed, shots, alpha, epochs, visualize)
     configs = []
     for s in seeds:
-        for a in alphas:
-            configs.append((s, shots, a, epochs))
-            
-    print(f"Launching {len(configs)} parallel experiments for grid search...")
+        vis = (s == 1) # Visualize only seed 1
+        configs.append((s, shots, alpha, epochs, vis))
     
-    # Starmap over configs
-    # We unpack the configs tuple
-    results = list(run_experiment.starmap(configs))
+    print(f"Launching 5-Seed Robustness Verification (Alpha={alpha})...")
     
-    os.makedirs("results", exist_ok=True)
+    accuracies = []
     
-    # Process results
-    best_acc = 0.0
-    best_cfg = None
+    # Run in parallel using .map() because run_experiment takes a single tuple argument
+    results = list(run_experiment.map(configs))
     
-    for (seed, shot, alpha, epoch), acc in zip(configs, results):
-        filename = f"results/res_seed{seed}_shot{shot}_alpha{alpha}.txt"
-        with open(filename, "w") as f:
-            f.write(acc)
-        print(f"Config [Seed={seed}, Alpha={alpha}]: {acc}")
-        
+    for i, res in enumerate(results):
         try:
-            if float(acc) > best_acc:
-                best_acc = float(acc)
-                best_cfg = (alpha, epoch)
+            acc = float(res)
         except:
-            pass
-            
-    print(f"Search Complete. Best Accuracy: {best_acc}")
-    print(f"Recommended Config: Alpha={best_cfg[0]}, Epochs={best_cfg[1]}")
+            acc = 0.0
+        accuracies.append(acc)
+        print(f"Seed {seeds[i]}: {acc:.4f}")
+        
+    # Stats
+    mean_acc = np.mean(accuracies)
+    std_acc = np.std(accuracies)
+    
+    print(f"\n=== FINAL ROBUSTNESS REPORT ===")
+    print(f"Config: ViT-B/16, Alpha={alpha}, 16-Shot + TTA")
+    print(f"Accuracies: {accuracies}")
+    # Format for LaTeX: Mean +/- Std
+    print(f"LaTeX Format: {mean_acc*100:.1f} \\pm {std_acc*100:.1f}")
+    
+    with open("robustness_results.txt", "w") as f:
+        f.write(f"MEAN:{mean_acc:.4f}\nSTD:{std_acc:.4f}\nRAW:{','.join(map(str, accuracies))}")
