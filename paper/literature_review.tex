@@ -1,8 +1,8 @@
 \section{Related Work}
 
 \paragraph{Few-Shot Learning with VLMs.}
-Vision-Language Models (VLMs) like CLIP have revolutionized few-shot learning by leveraging massive pre-training. 
-Early approaches such as CoOp introduced learnable context vectors to replace hand-crafted prompts, significantly improving adaptation performance. 
+Vision-Language Models (VLMs) like CLIP \cite{radford2021learning} have revolutionized few-shot learning by leveraging massive pre-training. 
+Early approaches such as CoOp \cite{zhou2022learning} introduced learnable context vectors to replace hand-crafted prompts, significantly improving adaptation performance. 
 However, these methods often suffer from overfitting to base classes. 
 Recent work has focused on robust fine-tuning; for instance, \textit{PromptFuseNL} achieved state-of-the-art results with training speeds 300$\times$ faster than full fine-tuning by efficiently fusing prompt tokens with frozen visual features.
 Similarly, \textit{AgroViT} demonstrated the power of domain-specific adaptation in agriculture, achieving 95.1\% balanced accuracy on rare crop diseases with only five labeled examples per class, highlighting the potential of VLMs in specialized domains.
@@ -14,5 +14,5 @@ Recent studies in vocabulary-free FSL for VLMs have reported training times unde
 This is particularly relevant for industrial applications, such as defect detection in needle bearings, where defects may not have standardized naming conventions yet require detection performance exceeding human experts.
 
 \paragraph{Robustness and Efficiency.}
-Efficiency remains a core challenge. While adapter-based methods like Tip-Adapter cached visual features for few-shot inference, they often lack the semantic flexibility of prompt tuning.
+Efficiency remains a core challenge. While adapter-based methods like Tip-Adapter \cite{zhang2021tip} cached visual features for few-shot inference, they often lack the semantic flexibility of prompt tuning.
 Our work bridges this gap by combining the speed of cache-based adapters with the semantic generalization of vocabulary-free prompt learning.

@@ -48,14 +48,19 @@ def run_experiment(seed: int, shots: int, alpha: float, epochs: int):
         def __init__(self, s, sh, a, e):
             self.seed = s
             self.shots = sh
+    class Args:
+        def __init__(self, s, sh, a, e, vis=False):
+            self.seed = s
+            self.shots = sh
             self.alpha = a
             self.epochs = e
             self.lr = 1e-3
             # UPGRADE: SOTA Backbone
             self.backbone = 'ViT-B/16'
             self.dataset = 'OxfordPets'
+            self.visualize = vis
             
-    args = Args(seed, shots, alpha, epochs)
+    args = Args(seed, shots, alpha, epochs, visualize)
     
     print(f"Running SOTA-Optimization on Modal: Back={args.backbone}, Seed={seed}")
     

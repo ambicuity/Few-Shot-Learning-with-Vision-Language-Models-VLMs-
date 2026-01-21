@@ -189,6 +189,42 @@ def train(args):
         
     print(f"Seed {args.seed} | Shots {args.shots} | Alpha {args.alpha} | Back {args.backbone} | Acc: {acc.item():.4f}")
     
+    # --- VISUAL DIAGNOSTIC (Fix 5) ---
+    # Generate Heatmap of Adapter-Aligned Features vs Prototypes
+    # We take the first 10 classes to avoid overcrowding the plot
+    try:
+        if args.visualize:
+            print("Generating Visual Diagnostic...")
+            import matplotlib.pyplot as plt
+            import seaborn as sns
+            
+            # Select subset for visualization
+            n_vis = 10
+            vis_indices = torch.where(query_labels < n_vis)[0]
+            if len(vis_indices) > 0:
+                vis_feats = adapter(query_features[vis_indices], prototypes) # Aligned features
+                vis_labels = query_labels[vis_indices]
+                vis_protos = prototypes[:n_vis]
+                
+                # Normalize 
+                vis_feats = vis_feats / vis_feats.norm(dim=-1, keepdim=True)
+                
+                # Compute Similarity Matrix: Query (Y) vs Prototype (X)
+                # We expect high diagonal per class block
+                sim_matrix = (vis_feats @ vis_protos.T).cpu().numpy()
+                
+                plt.figure(figsize=(10, 8))
+                sns.heatmap(sim_matrix[:20], cmap="viridis", annot=False) # Plot first 20 queries
+                plt.title(f"Feature-Prototype Alignment (Alpha={args.alpha})")
+                plt.xlabel("Prototypes")
+                plt.ylabel("Query Samples")
+                plt.tight_layout()
+                plt.savefig('results/alignment_heatmap.png')
+                print("Saved results/alignment_heatmap.png")
+    except Exception as e:
+        print(f"Visualization failed: {e}")
+    # ---------------------------------
+
     os.makedirs('results', exist_ok=True)
     fname = f'results/res_seed{args.seed}_shot{args.shots}_alpha{args.alpha}.txt'
     with open(fname, 'w') as f:
@@ -200,8 +236,9 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str, default='OxfordPets')
     parser.add_argument('--shots', type=int, default=16)
     parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--alpha', type=float, default=0.2) # OPTIMAL
-    parser.add_argument('--epochs', type=int, default=100) # OPTIMAL
+    parser.add_argument('--alpha', type=float, default=0.2) 
+    parser.add_argument('--epochs', type=int, default=100) 
     parser.add_argument('--lr', type=float, default=1e-3)
+    parser.add_argument('--visualize', action='store_true', help='Generate diagnostic plots')
     args = parser.parse_args()
     train(args)
