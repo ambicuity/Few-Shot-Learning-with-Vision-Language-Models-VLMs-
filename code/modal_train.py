@@ -26,12 +26,7 @@ app = modal.App("few-shot-vlm-research")
 # Use a volume to persist the dataset
 data_volume = modal.Volume.from_name("oxford-pets-data", create_if_missing=True)
 
-@app.function(
-    image=image,
-    gpu="any", 
-    timeout=1800,
-    volumes={"/root/data": data_volume}
-)
+
 @app.function(image=image, gpu="any", timeout=1800, volumes={"/root/data": data_volume})
 def run_experiment(config):
     # Setup imports inside the container
