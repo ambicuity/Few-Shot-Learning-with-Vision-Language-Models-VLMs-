@@ -41,11 +41,12 @@ def run_experiment(config):
         from code import train
 
     # Fix: Unpack tuple configuration
+    # config: (seed, shots, alpha, epochs, visualize, dataset)
     print(f"DEBUG: Processing config: {config}")
-    seed, shots, alpha, epochs, visualize = config
+    seed, shots, alpha, epochs, visualize, dataset_name = config
     
     class Args:
-        def __init__(self, s, sh, a, e, vis=False):
+        def __init__(self, s, sh, a, e, vis=False, ds='OxfordPets'):
             self.seed = s
             self.shots = sh
             self.alpha = a
@@ -53,12 +54,12 @@ def run_experiment(config):
             self.lr = 1e-3
             # UPGRADE: SOTA Backbone
             self.backbone = 'ViT-B/16'
-            self.dataset = 'OxfordPets'
+            self.dataset = ds
             self.visualize = vis
             
-    args = Args(seed, shots, alpha, epochs, visualize)
+    args = Args(seed, shots, alpha, epochs, visualize, dataset_name)
     
-    print(f"Running SOTA-Optimization on Modal: Back={args.backbone}, Seed={seed}")
+    print(f"Running on Modal: Dataset={args.dataset}, Seed={seed}")
     
     try:
         if hasattr(train, 'train'):
@@ -67,7 +68,7 @@ def run_experiment(config):
             train(args)
     except Exception as e:
         print(f"Training failed: {e}")
-        raise e
+        return "0.0"
         
     res_file = f'results/res_seed{args.seed}_shot{args.shots}_alpha{args.alpha}.txt'
     if os.path.exists(res_file):
@@ -83,37 +84,43 @@ def main():
     alpha = 0.2
     epochs = 100
     shots = 16
+    datasets = ['OxfordPets', 'EuroSAT'] # Run both supported datasets
     
-    # Pass TUPLES to map: (seed, shots, alpha, epochs, visualize)
+    # Pass TUPLES to map: (seed, shots, alpha, epochs, visualize, dataset)
     configs = []
-    for s in seeds:
-        vis = (s == 1) # Visualize only seed 1
-        configs.append((s, shots, alpha, epochs, vis))
+    for ds in datasets:
+        for s in seeds:
+            vis = (s == 1) # Visualize only seed 1 per dataset
+            configs.append((s, shots, alpha, epochs, vis, ds))
     
-    print(f"Launching 5-Seed Robustness Verification (Alpha={alpha})...")
+    print(f"Launching 5-Seed Robustness Verification for {datasets}...")
     
-    accuracies = []
-    
-    # Run in parallel using .map() because run_experiment takes a single tuple argument
+    # Run in parallel
     results = list(run_experiment.map(configs))
     
-    for i, res in enumerate(results):
-        try:
-            acc = float(res)
-        except:
-            acc = 0.0
-        accuracies.append(acc)
-        print(f"Seed {seeds[i]}: {acc:.4f}")
+    # Aggregate results
+    final_report = {}
+    
+    # Unpack results back to structure
+    idx = 0
+    for ds in datasets:
+        ds_accs = []
+        print(f"\n--- Results for {ds} ---")
+        for s in seeds:
+            res = results[idx]
+            idx += 1
+            try:
+                acc = float(res)
+            except:
+                acc = 0.0
+            ds_accs.append(acc)
+            print(f"Seed {s}: {acc:.4f}")
         
-    # Stats
-    mean_acc = np.mean(accuracies)
-    std_acc = np.std(accuracies)
-    
-    print(f"\n=== FINAL ROBUSTNESS REPORT ===")
-    print(f"Config: ViT-B/16, Alpha={alpha}, 16-Shot + TTA")
-    print(f"Accuracies: {accuracies}")
-    # Format for LaTeX: Mean +/- Std
-    print(f"LaTeX Format: {mean_acc*100:.1f} \\pm {std_acc*100:.1f}")
-    
-    with open("robustness_results.txt", "w") as f:
-        f.write(f"MEAN:{mean_acc:.4f}\nSTD:{std_acc:.4f}\nRAW:{','.join(map(str, accuracies))}")
+        mean_acc = np.mean(ds_accs)
+        std_acc = np.std(ds_accs)
+        final_report[ds] = (mean_acc, std_acc)
+        print(f"LaTeX: {mean_acc*100:.1f} \\pm {std_acc*100:.1f}")
+
+    print(f"\n=== FINAL SUMMARY ===")
+    for ds, (m, s) in final_report.items():
+        print(f"{ds}: {m*100:.1f} +/- {s*100:.1f}")

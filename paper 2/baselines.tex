@@ -1,0 +1,13 @@
+\section{Baselines}
+
+We compare DAPT against the following state-of-the-art methods:
+
+\begin{itemize}
+    \item \textbf{Zero-Shot CLIP:} The original pre-trained model without any fine-tuning. This serves as the lower bound for adaptation performance.
+    \item \textbf{CoOp (Context Optimization):} Optimizes a set of continuous context vectors in the prompt. We use the class-specific context version with 16 context tokens.
+    \item \textbf{CoCoOp (Conditional Context Optimization):} An extension of CoOp where the context vectors are conditioned on each input instance, improving generalization to unseen classes.
+    \item \textbf{Tip-Adapter-F:} A training-free (and fine-tuned) adapter method that creates a key-value cache of few-shot features. We compare against the fine-tuned version for fair comparison of computational budget.
+\end{itemize}
+
+All baselines are trained using the official implementations with hyperparameters matched to our training budget. 
+Specifically, we limit training to 50 epochs for optimization-based methods to ensure fair comparison of efficiency.

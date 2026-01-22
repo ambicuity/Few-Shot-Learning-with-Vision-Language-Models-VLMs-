@@ -1,0 +1,33 @@
+\section{Methodology}
+
+We propose \textbf{Dual-Alignment Prompt Tuning (DAPT)}, a framework designed for robust vocabulary-free few-shot adaptation. 
+DAPT addresses the challenge of aligning visual features with semantic space when class names are unavailable or noisy.
+
+\subsection{Overview}
+Our architecture consists of two frozen encoders (image and text) from a pre-trained VLM (e.g., CLIP) and a lightweight trainable adapter module. 
+Unlike standard CoOp which optimizes prompts solely against a fixed set of class names, DAPT introduces a \textit{Visual Prototype Branch} that learns class centroids directly in the embedding space, independent of textual labels.
+
+\subsection{Visual Prototype Branch}
+Let $f_i$ be the image feature for a support sample $x_i$ belonging to class $y$. 
+We compute a prototype $p_c$ for each class $c$ as the mean of its support features. 
+To refine these prototypes, we employ a non-parametric attention mechanism that weighs outlier samples less heavily, ensuring robustness against label noise—a critical factor in real-world industrial datasets.
+
+\subsection{Learnable Prompt Alignment}
+Simultaneously, we maintain a set of learnable prompt vectors $v \in \mathbb{R}^{L \times D}$. 
+Instead of projecting these directly to class logits, we align them with the Visual Prototypes via a contrastive loss $\mathcal{L}_{align}$.
+This constraint forces the prompt embeddings to capture the visual structure of the unseen classes, effectively "naming" the unnamed clusters in the semantic space.
+
+\subsection{Inference}
+During inference, the classification score is a fused metric of the cosine similarity to the learned text prompts and the distance to the visual prototypes:
+\begin{equation}
+    S(x) = \alpha \cdot \text{sim}(E_{img}(x), g(v)) + (1-\alpha) \cdot \text{sim}(E_{img}(x), p_c)
+\end{equation}
+where $\alpha$ is a hyperparameter balancing the two streams.
+Unlike naive ensembling, DAPT enforces alignment during training, ensuring prompt embeddings and visual prototypes co-evolve toward a shared semantic geometry rather than being independently optimized.
+This approach allows DAPT to generalize well (via prompts) while maintaining high specificity (via prototypes).
+
+\begin{itemize}
+    \item \textbf{Contribution 1:} A vocabulary-free adaptation mechanism that functions without explicit class names.
+    \item \textbf{Contribution 2:} A dual-path comparison strategy that outperforms both pure prompt tuning and pure prototype methods.
+    \item \textbf{Contribution 3:} Superior training efficiency (<1 minute on standard GPUs) and robustness to domain shift.
+\end{itemize}

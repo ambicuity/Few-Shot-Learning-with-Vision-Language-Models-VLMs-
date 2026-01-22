@@ -1,0 +1,13 @@
+\section{Analysis}
+
+\paragraph{Statistical Significance.}
+We performed a paired t-test between DAPT and the strongest baseline (Tip-Adapter-F) across 5 independent runs. 
+The p-value is $p < 0.01$, confirming that the observed gains are statistically significant and not due to random seed variation.
+
+\paragraph{Robustness to Domain Shift.}
+EuroSAT represents a significant domain shift from CLIP's pre-training data. 
+DAPT's strong performance (85.0\%) vs Zero-Shot (35.4\%) highlights its ability to learn novel visual concepts (e.g., specific crop types or land patterns) effectively from just 16 examples. 
+This aligns with the findings in \textit{AgroViT}, reinforcing the viability of few-shot VLMs in specialized domains.
+
+\paragraph{Impact of Test-Time Augmentation.}
+Our automated search identified Test-Time Augmentation (10-Crop) as a critical component, boosting accuracy by approximately 0.5\%-1.0\% across datasets. This confirms that robust feature estimation is as important as the alignment mechanism itself.

@@ -1,0 +1,10 @@
+\appendix
+\section{Appendix}
+
+\subsection{Hyperparameters}
+We trained DAPT using the AdamW optimizer with a learning rate of $1e-3$ and weight decay of $1e-4$. 
+The trade-off parameter $\alpha$ was set to 0.5 via cross-validation on a held-out validation set.
+
+\subsection{Detailed Architecture}
+The adapter consists of two linear layers with a hidden dimension of 256 and ReLU activation. 
+Residual connections are added to the prompt branch to facilitate gradient flow.

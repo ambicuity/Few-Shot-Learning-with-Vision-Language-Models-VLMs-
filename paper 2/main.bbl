@@ -1,0 +1,18 @@
+\begin{thebibliography}{1}
+
+\bibitem{radford2021learning}
+Radford, Alec and Kim, Jong Wook and Hallacy, Chris and Ramesh, Aditya and Goh, Gabriel and Agarwal, Sandhini and Sastry, Girish and Askell, Amanda and Mishkin, Pamela and Clark, Jack and others.
+\newblock Learning transferable visual models from natural language supervision.
+\newblock \emph{arXiv preprint arXiv:2103.00020}, 2021.
+
+\bibitem{zhang2021tip}
+Zhang, Renrui and Wei, Rongyao and Zhang, Peng and Wu, Ping and Liu, Steven and Lu, Yandong and Shen, Chunhua and others.
+\newblock Tip-adapter: Training-free clip-adapter for better vision-language modeling.
+\newblock \emph{arXiv preprint arXiv:2111.03930}, 2021.
+
+\bibitem{zhou2022learning}
+Zhou, Kaiyang and Yang, Jingkang and Loy, Chen Change and Liu, Ziwei.
+\newblock Learning to prompt for vision-language models.
+\newblock \emph{International Journal of Computer Vision}, 130(9):2337--2348, 2022.
+
+\end{thebibliography}

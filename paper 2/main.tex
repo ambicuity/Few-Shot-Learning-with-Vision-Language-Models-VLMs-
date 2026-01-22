@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{geometry}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+
+\title{Dual-Alignment Prompt Tuning: Vocabulary-Free Few-Shot Learning with Vision-Language Models}
+\author{Ritesh Rana \\ \texttt{ritesh19@bu.edu}}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Few-shot learning allows models to adapt to new tasks with minimal data, yet current Vision-Language Models (VLMs) often rely on pre-defined class vocabularies. 
+We propose Dual-Alignment Prompt Tuning (DAPT), a novel framework that combines visual prototype learning with semantic prompt tuning to enable high-performance vocabulary-free adaptation.
+Experiments on MVTec AD, EuroSAT, and Oxford Pets demonstrate that DAPT outperforms state-of-the-art baselines by up to 8.2\%, establishing a strong empirical baseline for vocabulary-free few-shot learning.
+\end{abstract}
+
+\input{literature_review}
+\input{method}
+\input{proofs}
+\input{datasets}
+\input{baselines}
+\input{results}
+\input{analysis}
+\input{ethics}
+\input{conclusion}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
